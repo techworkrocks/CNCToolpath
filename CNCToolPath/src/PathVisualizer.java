@@ -25,7 +25,7 @@ public class PathVisualizer extends JPanel implements MouseWheelListener, MouseL
 	double offsetX = 0;
 	double offsetY = 0;
 	
-	static double toolRadius = 0.8;
+	static double toolRadius = 0.7;
 	
 	private List<Contour2D> contours = new ArrayList<Contour2D>(); 
 
