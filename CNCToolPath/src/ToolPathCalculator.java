@@ -97,9 +97,29 @@ public class ToolPathCalculator {
 
         // remove inner segments
         adjustedPath = removeInnerSegments ( adjustedPath, intersections );
+        
+        List<Point2D> cleanedPath = removeDuplicates( adjustedPath );
 
         // close path
-        return adjustedPath;
+        return cleanedPath;
+    }
+    
+    private List<Point2D> removeDuplicates( List<Point2D> path) {
+    	List<Point2D> ret = new ArrayList<Point2D>(); 
+    	
+    	Point2D last = null;
+    	for(Point2D p : path) {
+    		if (last == null) {
+    			ret.add(p);
+    		} else {
+    			if (!last.equals(p)) {
+    				ret.add(p);
+    			}
+    		}
+    		last = p;
+    	}
+    	
+    	return ret;
     }
     
     private List<Point2D> removeInnerSegments(List<Point2D> polygon, List<Point2D> intersections) {

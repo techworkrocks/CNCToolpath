@@ -1,165 +1,133 @@
+import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.Point2D;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
 
-public class PathVisualizer extends JPanel implements MouseWheelListener, MouseListener, MouseMotionListener {
+public class PathVisualizer extends JFrame implements ActionListener, CoordListener {
     
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	double scaleFactor = 40;
-	double offsetX = 0;
-	double offsetY = 0;
+	protected PathPanel pathPanel;
+	protected JLabel coordLabelX, coordLabelY;
+	protected JButton loadButton;
+	protected String defaultDir = "C:\\peter\\oc_gw\\design\\preformer\\engraver\\data";
 	
-	static double toolRadius = 0.7;
+	static double toolRadius = .8;
 	
-	private List<Contour2D> contours = new ArrayList<Contour2D>(); 
 
 	public PathVisualizer () {
 		setBackground(Color.lightGray);
+		setTitle("SVG Path Visualizer");
+        
+		JTextArea textArea = new JTextArea(30, 50);
+		textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+		MessageConsole mc = new MessageConsole(textArea);
+		mc.redirectOut();
+		JScrollPane scroll = new JScrollPane(textArea);
+		scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+                
+		JPanel commandPanel = new JPanel();
+		commandPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+		loadButton = new JButton("Load SVG");
+		loadButton.addActionListener(this);
+		commandPanel.add( loadButton );
+		coordLabelX = new JLabel();
+		coordLabelY = new JLabel();
+		Dimension labelMinSize = new Dimension(100,1);
+		coordLabelX.setMinimumSize(labelMinSize);
+		coordLabelY.setMinimumSize(labelMinSize);
+		commandPanel.add(coordLabelX);
+		commandPanel.add(coordLabelY);
+
 		
-		addMouseWheelListener(this);
-		addMouseListener(this);
-		addMouseMotionListener(this);
+		pathPanel = new PathPanel();
+		pathPanel.addCoordListener(this);
+		
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+        		pathPanel, scroll);
+        setLayout(new BorderLayout());
+        add(splitPane, BorderLayout.CENTER);
+        add(commandPanel, BorderLayout.NORTH);
+        setSize(1400, 1000);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setVisible(true);
+        
+        splitPane.setDividerLocation(0.8);
+    
+
+    	if( System.getProperty("defaultDir") != null)
+    		defaultDir = System.getProperty("defaultDir");
+
+		fc = new JFileChooser();
+		if(defaultDir != null)
+			fc.setCurrentDirectory(new File(defaultDir));
+
+//        List<Point2D> path = SVGPathReader.getInstance().readPathFromSVGFile(FILENAME);
+//        pathVisualizer.addContour(new Contour2D("Initial", path, Color.green) );
 	}
 	
-	
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
 
-        Point area = new Point(this.getWidth(), this.getHeight());
-        
-        g2d.setColor(Color.gray);
-        g2d.drawLine(area.x/2 + (int) this.offsetX, 0, area.x/2 + (int) this.offsetX, this.getHeight());
-        g2d.drawLine(0, area.y/2 + (int) this.offsetY, this.getWidth(), area.y/2 + (int) this.offsetY);
-
-        contours.forEach( c -> {
-        	drawPolygon(g2d, c.path, c.color, area.x/2, area.y/2);
-        });
-    }
-    
-    private void addContour(Contour2D contour) {
-    	contours.add(contour);
-    	repaint();
-    }
-
-    private void drawPolygon(Graphics2D g2d, List<Point2D> polygon, Color color, int oX, int oY) {
-
-        int n = polygon.size();
-        for (int i = 0; i < n; i++) {
-            Point2D p1 = polygon.get(i);
-            Point2D p2 = polygon.get((i + 1) % n);
-            g2d.setColor(color);
-            g2d.drawLine(oX + (int) (p1.getX()*scaleFactor)+(int) offsetX, oY + (int) (p1.getY()*scaleFactor)+(int) offsetY, oX + (int) (p2.getX()*scaleFactor)+(int) offsetX, oY + (int) (p2.getY()*scaleFactor)+(int) offsetY);
-        }
-        
-        int size = 4;
-        for (int i=0; i<n; i++) {
-            Point2D p1 = polygon.get(i);
-            g2d.setColor(Color.black);
-            g2d.fillOval((int) (oX + p1.getX()*scaleFactor)+(int) offsetX-size/2, oY + (int) (p1.getY()*scaleFactor)+(int) offsetY-size/2, size, size);
-        }
-    }
+    JFileChooser fc;
 
     public static void main(String[] args) {
-    	String FILENAME = "C:\\peter\\oc_gw\\design\\preformer\\engraver\\data\\vancleef_umriss.svg";
-    	//String FILENAME = "C:\\peter\\oc_gw\\design\\preformer\\engraver\\data\\test.svg";
-    	//List<Point2D> path = new ArrayList<>();
-    	
-        JFrame frame = new JFrame("Path Visualizer");
-        PathVisualizer panel = new PathVisualizer() ;
+     	
+        PathVisualizer pathVisualizer = new PathVisualizer();
+        pathVisualizer.setVisible(true);
 
-        List<Point2D> path = SVGPathReader.getInstance().readPathFromSVGFile(FILENAME);
-        panel.addContour(new Contour2D(path, Color.green) );
-        panel.addContour(new Contour2D(ToolPathCalculator.getInstance().calculateToolpath(path, toolRadius), Color.blue));
-        //panel.addContour(new Contour2D(SVGPathReader.getInstance().readPathFromSVGFile(FILENAME), Color.green) );
-        frame.add(panel);
-        frame.setSize(1000, 1000);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
     }
-
-    Point lastDragPos = new Point();
     
-	@Override
-	public void mouseDragged(MouseEvent e) {
-		this.offsetX += (e.getX() - lastDragPos.x);
-		this.offsetY += (e.getY() - lastDragPos.y);
-		
-		lastDragPos.x = e.getX();
-		lastDragPos.y = e.getY();
-		
-		repaint();
-	}
+    
 
 
 	@Override
-	public void mouseMoved(MouseEvent e) {}
-
-
-	@Override
-	public void mouseClicked(MouseEvent e) { }
-
-
-	@Override
-	public void mousePressed(MouseEvent e) {
-		lastDragPos.x = e.getX();
-		lastDragPos.y = e.getY();
-	}
-
-
-	@Override
-	public void mouseReleased(MouseEvent e) {
-		lastDragPos.x = 0;
-		lastDragPos.y = 0;	
-	}
-
-
-	@Override
-	public void mouseEntered(MouseEvent e) {}
-
-
-	@Override
-	public void mouseExited(MouseEvent e) {}
-
-
-	@Override
-	public void mouseWheelMoved(MouseWheelEvent e) {
-		
-		if(e.getScrollType() == MouseWheelEvent.WHEEL_UNIT_SCROLL) {
-			Point center = new Point(this.getWidth()/2+(int)this.offsetX, this.getHeight()/2+(int)this.offsetY);
-			Point mousePixel = new Point(e.getX(), e.getY());
-			
-			int diffX = mousePixel.x - center.x;
-			int diffY = mousePixel.y - center.y;
-			Point2D mouseDrawing = new Point2D.Double( diffX / this.scaleFactor, diffY / this.scaleFactor );
-			
-			// change scale factor
-			int amount = e.getWheelRotation();
-			this.scaleFactor = this.scaleFactor * (1.0 + (double) amount/10.0)  ;
-			this.scaleFactor = Math.max(this.scaleFactor, 1);
-			
-			this.offsetX -= (mouseDrawing.getX() * scaleFactor) - (mousePixel.getX()-center.x);
-			this.offsetY -= (mouseDrawing.getY() * scaleFactor) - (mousePixel.getY()-center.y);
-			
-			repaint();
+	public void actionPerformed(ActionEvent e) {
+		if (e.getSource() == loadButton) {
+			int returnVal = fc.showOpenDialog(this);
+			if (returnVal == JFileChooser.APPROVE_OPTION) {
+				File file = fc.getSelectedFile();
+		        List<Point2D> path = SVGPathReader.getInstance().readPathFromSVGFile(file);
+		        pathPanel.removeAllContours();
+		        pathPanel.addContour(new Contour2D(file.getName(), path, Color.green) );
+			}
 		}
+		
+	}
+
+
+
+
+	@Override
+	public void coordsUpdated(Point2D p) {
+		coordLabelX.setText(String.format("%.3f", p.getX()));
+		coordLabelY.setText(String.format("%.3f", p.getY()));
 		
 	}
     
