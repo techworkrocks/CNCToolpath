@@ -26,6 +26,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 
 public class PathVisualizer extends JFrame implements ActionListener, CoordListener {
     
@@ -37,6 +38,7 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 	protected PathPanel pathPanel;
 	protected JLabel coordLabelX, coordLabelY;
 	protected JButton loadButton;
+	protected JTextField toolRadiusTF;
 	protected String defaultDir = "C:\\peter\\oc_gw\\design\\preformer\\engraver\\data";
 	
 	static double toolRadius = .8;
@@ -59,6 +61,13 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 		loadButton = new JButton("Load SVG");
 		loadButton.addActionListener(this);
 		commandPanel.add( loadButton );
+		JPanel radiusPanel = new JPanel();
+		radiusPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+		radiusPanel.add(new JLabel("Tool Radius:"));
+		toolRadiusTF = new JTextField(""+toolRadius);
+		toolRadiusTF.addActionListener(this);
+		radiusPanel.add(toolRadiusTF);
+		commandPanel.add(radiusPanel);
 		coordLabelX = new JLabel();
 		coordLabelY = new JLabel();
 		Dimension labelMinSize = new Dimension(100,1);
@@ -89,9 +98,6 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 		fc = new JFileChooser();
 		if(defaultDir != null)
 			fc.setCurrentDirectory(new File(defaultDir));
-
-//        List<Point2D> path = SVGPathReader.getInstance().readPathFromSVGFile(FILENAME);
-//        pathVisualizer.addContour(new Contour2D("Initial", path, Color.green) );
 	}
 	
 
@@ -116,6 +122,8 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 		        List<Point2D> path = SVGPathReader.getInstance().readPathFromSVGFile(file);
 		        pathPanel.removeAllContours();
 		        pathPanel.addContour(new Contour2D(file.getName(), path, Color.green) );
+		        List<Point2D> toolPath = ToolPathCalculator.getInstance().calculateToolpath(path, Float.parseFloat(toolRadiusTF.getText()));
+		        pathPanel.addContour(new Contour2D("Toolpath", toolPath, Color.blue) );
 			}
 		}
 		
