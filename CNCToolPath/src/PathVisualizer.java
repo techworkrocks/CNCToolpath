@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -37,8 +38,9 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 	
 	protected PathPanel pathPanel;
 	protected JLabel coordLabelX, coordLabelY;
-	protected JButton loadButton;
+	protected JButton loadButton, traceButton;
 	protected JTextField toolRadiusTF;
+	protected JCheckBox removeIntersectionsCB;
 	protected String defaultDir = "C:\\peter\\oc_gw\\design\\preformer\\engraver\\data";
 	
 	static double toolRadius = .8;
@@ -63,13 +65,20 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 		commandPanel.add( loadButton );
 		JPanel radiusPanel = new JPanel();
 		radiusPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-		radiusPanel.add(new JLabel("Tool Radius:"));
-		toolRadiusTF = new JTextField(""+toolRadius);
+		radiusPanel.add(new JLabel("Tool Radius (mm):"));
+		toolRadiusTF = new JTextField(""+toolRadius, 10);
+		toolRadiusTF.setHorizontalAlignment(JTextField.CENTER);
 		toolRadiusTF.addActionListener(this);
 		radiusPanel.add(toolRadiusTF);
 		commandPanel.add(radiusPanel);
 		coordLabelX = new JLabel();
 		coordLabelY = new JLabel();
+		traceButton = new JButton("Trace Toolpath");
+		traceButton.addActionListener(this);
+		commandPanel.add( traceButton );
+		removeIntersectionsCB = new JCheckBox("Remove Intersections");
+		commandPanel.add(removeIntersectionsCB);
+		
 		Dimension labelMinSize = new Dimension(100,1);
 		coordLabelX.setMinimumSize(labelMinSize);
 		coordLabelY.setMinimumSize(labelMinSize);
@@ -89,7 +98,7 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setVisible(true);
         
-        splitPane.setDividerLocation(0.8);
+        splitPane.setDividerLocation(0.65);
     
 
     	if( System.getProperty("defaultDir") != null)
@@ -120,11 +129,19 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 			if (returnVal == JFileChooser.APPROVE_OPTION) {
 				File file = fc.getSelectedFile();
 		        List<Point2D> path = SVGPathReader.getInstance().readPathFromSVGFile(file);
+		        List<Point2D> optimizedPath = ToolPathCalculator.getInstance().removeRedundants(path);
 		        pathPanel.removeAllContours();
 		        pathPanel.addContour(new Contour2D(file.getName(), path, Color.green) );
-		        List<Point2D> toolPath = ToolPathCalculator.getInstance().calculateToolpath(path, Float.parseFloat(toolRadiusTF.getText()));
+		        List<Point2D> toolPath = ToolPathCalculator.getInstance().calculateToolpath(path, Float.parseFloat(toolRadiusTF.getText()), removeIntersectionsCB.isSelected());
 		        pathPanel.addContour(new Contour2D("Toolpath", toolPath, Color.blue) );
 			}
+		} 
+		else if (e.getSource() == traceButton) {
+			Contour2D initialContour = pathPanel.getContour( 0 );
+			pathPanel.removeContour( 1 );
+			
+	        List<Point2D> toolPath = ToolPathCalculator.getInstance().calculateToolpath(initialContour.path, Float.parseFloat(toolRadiusTF.getText()), removeIntersectionsCB.isSelected());
+	        pathPanel.addContour(new Contour2D("Toolpath", toolPath, Color.blue) );
 		}
 		
 	}

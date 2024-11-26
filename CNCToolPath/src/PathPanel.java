@@ -55,6 +55,10 @@ public class PathPanel extends JPanel implements MouseWheelListener, MouseListen
     	repaint();
     }
     
+    public Contour2D getContour(int index) {
+    	return contours.get(index);
+    }
+    
     private void drawPolygon(Graphics2D g2d, List<Point2D> polygon, Color color, int oX, int oY) {
 
         int n = polygon.size();
@@ -154,6 +158,12 @@ public class PathPanel extends JPanel implements MouseWheelListener, MouseListen
 	public void addCoordListener(CoordListener listener) {
 		coordListeners.add(listener);
 		
+	}
+
+	public void removeContour(int index) {
+		if(contours.size() > index) {
+			contours.remove( index );			
+		}
 	}
 
 }

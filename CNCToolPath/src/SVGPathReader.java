@@ -57,7 +57,7 @@ class SimpleSVGHandler extends DefaultHandler {
    				
    			while (t.hasMoreElements() ) {
    				String el = t.nextToken();
-   				if(el.length() == 1) { // some letter
+   				if(el.length() == 1 && !"0".equals(el)) { // some letter
    	   				if("m".equals(el) || "l".equals(el)) {
    	   					isAbsolute = false; // points indicate movements from one point to the next
    						vertical = false;

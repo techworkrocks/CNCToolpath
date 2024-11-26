@@ -5,7 +5,7 @@ import java.util.List;
 
 public class ToolPathCalculator {
 
-	private static final double EQUAL_POINT_EPSILON = 0.001;
+	private static final double EQUAL_POINT_EPSILON = 0.00001;
     
 	private static ToolPathCalculator instance = null;
 	
@@ -16,10 +16,13 @@ public class ToolPathCalculator {
 		return instance;
 	}
     
-    public List<Point2D> calculateToolpath(List<Point2D> inputPolygon, double toolRadius) {
+    public List<Point2D> calculateToolpath(List<Point2D> inputPolygon, double toolRadius, boolean removeIntersections) {
         List<Point2D> offsetPolygon = calculateOffsetPolygon(inputPolygon, toolRadius);
-
-        return createAdjustedToolPath(offsetPolygon);    	
+        if(removeIntersections) {
+            return createAdjustedToolPath(offsetPolygon);    	        	
+        } else {
+            return offsetPolygon;        	
+        }
     }
     
     private List<Point2D> calculateOffsetPolygon(List<Point2D> polygon, double offset) {
@@ -56,7 +59,7 @@ public class ToolPathCalculator {
         return new Line2D.Double(p1Offset, p2Offset);
     }
 
-    private Point2D getIntersectionPoint(Line2D line1, Line2D line2) {
+    private static Point2D getIntersectionPoint(Line2D line1, Line2D line2) {
         double x1 = line1.getX1(), y1 = line1.getY1();
         double x2 = line1.getX2(), y2 = line1.getY2();
         double x3 = line2.getX1(), y3 = line2.getY1();
@@ -66,7 +69,7 @@ public class ToolPathCalculator {
         if (denom == 0) return null; // parallel
 
         double ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
-        double ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+        //double ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
 
         double intersectionX = x1 + ua * (x2 - x1);
         double intersectionY = y1 + ua * (y2 - y1);
@@ -87,18 +90,22 @@ public class ToolPathCalculator {
           
           List<Point2D> is = getIntersections(p1, p2, offsetPolygon);
           
-          if(is.size() > 0) {
+          if(is.size() == 1) {
         	  adjustedPath.add(is.get(0));
         	  intersections.add(is.get(0));
-          }                 
+          } else if (is.size() > 1) {
+        	  throw new IllegalArgumentException("Segment with more than 1 intersection is not supported!");
+          }
         }
 
         adjustedPath.add(offsetPolygon.get(0)); 
 
-        // remove inner segments
-        adjustedPath = removeInnerSegments ( adjustedPath, intersections );
+        List<Point2D> noDups = removeDuplicates( adjustedPath );
         
-        List<Point2D> cleanedPath = removeDuplicates( adjustedPath );
+        // remove inner segments
+        List<Point2D> cleanedPath = removeInnerSegments ( noDups, intersections );
+        
+        //List<Point2D> cleanedPath = removeDuplicates( adjustedPath );
 
         // close path
         return cleanedPath;
@@ -183,5 +190,18 @@ public class ToolPathCalculator {
         //return (p.getX() >= minX && p.getX() <= maxX && p.getY() >= minY && p.getY() <= maxY);
         return (p.getX() > minX && p.getX() < maxX && p.getY() > minY && p.getY() < maxY);
     }
+
+	public List<Point2D> removeRedundants(List<Point2D> path) {
+		List<Point2D> ret = new ArrayList<>();
+		
+		for (int i=0; i<path.size(); i++) {
+			if(i == 0 || i +1 == path.size()) {
+				ret.add(path.get(i));
+			} else {
+				
+			}
+		}
+		return ret;
+	}
 
 }
