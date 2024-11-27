@@ -1,6 +1,7 @@
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class ToolPathCalculator {
@@ -16,16 +17,52 @@ public class ToolPathCalculator {
 		return instance;
 	}
     
-    public List<Point2D> calculateToolpath(List<Point2D> inputPolygon, double toolRadius, boolean removeIntersections) {
+    public List<Point2D> calculateToolpath(List<Point2D> inputPolygon, double toolRadius, boolean removeIntersections, float maxPathSegmentLength) {
         List<Point2D> offsetPolygon = calculateOffsetPolygon(inputPolygon, toolRadius);
+        List<Point2D> finePolygon = ensureMinimalSegmentLength(offsetPolygon, maxPathSegmentLength);
+        List<Point2D> retPath = new ArrayList<>();
         if(removeIntersections) {
-            return createAdjustedToolPath(offsetPolygon);    	        	
+            retPath = createAdjustedToolPath(finePolygon);    	        	
         } else {
-            return offsetPolygon;        	
+            retPath = finePolygon;        	
         }
+        
+        return removeDuplicates( retPath );
     }
     
-    private List<Point2D> calculateOffsetPolygon(List<Point2D> polygon, double offset) {
+    private List<Point2D> ensureMinimalSegmentLength(List<Point2D> offsetPolygon, float maxPathSegmentLength) {
+        
+        List<List<Point2D>> segments = new ArrayList<>();
+        for(int i=0; i<offsetPolygon.size(); i++) {
+        	List<Point2D> seg = new ArrayList<>( Arrays.asList(offsetPolygon.get(i), offsetPolygon.get((i+1) % offsetPolygon.size())));
+        	splitSegment(seg, maxPathSegmentLength);
+        	segments.add(seg);
+        }
+        return segments.stream().flatMap(seg -> seg.stream()).toList();
+	}
+
+	private void splitSegment(List<Point2D> seg, float maxPathSegmentLength) {
+		
+		if(seg.size() == 2) {
+			Point2D p1 = seg.get(0);
+			Point2D p2 = seg.get(1);
+			if (p1.distance(p2) > maxPathSegmentLength) {
+				Point2D c = new Point2D.Float((float) (p1.getX()+p2.getX())/2, (float) (p1.getY()+p2.getY())/2);
+				List<Point2D> seg1 = new ArrayList<>(Arrays.asList(p1, c));
+				List<Point2D> seg2 = new ArrayList<>(Arrays.asList(c, p2));
+				splitSegment(seg1, maxPathSegmentLength);
+				splitSegment(seg2, maxPathSegmentLength);
+				seg.clear();
+				seg.addAll(seg1);
+				seg.addAll(seg2);
+			}
+		} else {
+			throw new IllegalArgumentException("seg parameter should have 2 elements");
+		}
+		return;
+	}
+
+	private List<Point2D> calculateOffsetPolygon(List<Point2D> polygon, double offset) {
         List<Point2D> newVertices = new ArrayList<>();
         int n = polygon.size();
 
@@ -105,8 +142,6 @@ public class ToolPathCalculator {
         // remove inner segments
         List<Point2D> cleanedPath = removeInnerSegments ( noDups, intersections );
         
-        //List<Point2D> cleanedPath = removeDuplicates( adjustedPath );
-
         // close path
         return cleanedPath;
     }

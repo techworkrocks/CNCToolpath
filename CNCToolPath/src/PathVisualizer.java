@@ -38,22 +38,25 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 	
 	protected PathPanel pathPanel;
 	protected JLabel coordLabelX, coordLabelY;
-	protected JButton loadButton, traceButton;
-	protected JTextField toolRadiusTF;
+	protected JButton loadButton, traceButton, clearConsoleButton;
+	protected JTextField toolRadiusTF, maxPathSegmentTF;
 	protected JCheckBox removeIntersectionsCB;
+	protected JTextArea textArea;
 	protected String defaultDir = "C:\\peter\\oc_gw\\design\\preformer\\engraver\\data";
 	
-	static double toolRadius = .8;
+	double toolRadius = .8;
+	double minPathSegmentLength = .5;
 	
 
 	public PathVisualizer () {
 		setBackground(Color.lightGray);
 		setTitle("SVG Path Visualizer");
         
-		JTextArea textArea = new JTextArea(30, 50);
+		textArea = new JTextArea(30, 50);
 		textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
 		MessageConsole mc = new MessageConsole(textArea);
 		mc.redirectOut();
+		mc.redirectErr();
 		JScrollPane scroll = new JScrollPane(textArea);
 		scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 		scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
@@ -71,15 +74,29 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 		toolRadiusTF.addActionListener(this);
 		radiusPanel.add(toolRadiusTF);
 		commandPanel.add(radiusPanel);
-		coordLabelX = new JLabel();
-		coordLabelY = new JLabel();
+		removeIntersectionsCB = new JCheckBox("Remove Intersections");
+		commandPanel.add(removeIntersectionsCB);
+		JPanel maxPathSegmentPanel = new JPanel();
+		maxPathSegmentPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+		maxPathSegmentPanel.add(new JLabel("Max Segment Length (mm):"));
+		maxPathSegmentTF = new JTextField(""+minPathSegmentLength, 10);
+		maxPathSegmentTF.setHorizontalAlignment(JTextField.CENTER);
+		maxPathSegmentTF.addActionListener(this);
+		maxPathSegmentPanel.add(maxPathSegmentTF);
+		commandPanel.add(maxPathSegmentPanel);
+
 		traceButton = new JButton("Trace Toolpath");
 		traceButton.addActionListener(this);
 		commandPanel.add( traceButton );
-		removeIntersectionsCB = new JCheckBox("Remove Intersections");
-		commandPanel.add(removeIntersectionsCB);
+		
+		clearConsoleButton = new JButton("Clear Console");
+		clearConsoleButton.addActionListener(this);
+		commandPanel.add( clearConsoleButton );
+
 		
 		Dimension labelMinSize = new Dimension(100,1);
+		coordLabelX = new JLabel();
+		coordLabelY = new JLabel();
 		coordLabelX.setMinimumSize(labelMinSize);
 		coordLabelY.setMinimumSize(labelMinSize);
 		commandPanel.add(coordLabelX);
@@ -132,17 +149,19 @@ public class PathVisualizer extends JFrame implements ActionListener, CoordListe
 		        List<Point2D> optimizedPath = ToolPathCalculator.getInstance().removeRedundants(path);
 		        pathPanel.removeAllContours();
 		        pathPanel.addContour(new Contour2D(file.getName(), path, Color.green) );
-		        List<Point2D> toolPath = ToolPathCalculator.getInstance().calculateToolpath(path, Float.parseFloat(toolRadiusTF.getText()), removeIntersectionsCB.isSelected());
+		        List<Point2D> toolPath = ToolPathCalculator.getInstance().calculateToolpath(path, Float.parseFloat(toolRadiusTF.getText()), removeIntersectionsCB.isSelected(), Float.parseFloat(maxPathSegmentTF.getText()));
 		        pathPanel.addContour(new Contour2D("Toolpath", toolPath, Color.blue) );
 			}
-		} 
-		else if (e.getSource() == traceButton) {
+		} else if (e.getSource() == traceButton) {
 			Contour2D initialContour = pathPanel.getContour( 0 );
 			pathPanel.removeContour( 1 );
 			
-	        List<Point2D> toolPath = ToolPathCalculator.getInstance().calculateToolpath(initialContour.path, Float.parseFloat(toolRadiusTF.getText()), removeIntersectionsCB.isSelected());
+	        List<Point2D> toolPath = ToolPathCalculator.getInstance().calculateToolpath(initialContour.path, Float.parseFloat(toolRadiusTF.getText()), removeIntersectionsCB.isSelected(), Float.parseFloat(maxPathSegmentTF.getText()));
 	        pathPanel.addContour(new Contour2D("Toolpath", toolPath, Color.blue) );
+		} else if (e.getSource() == clearConsoleButton) {
+			textArea.setText(null);
 		}
+		
 		
 	}
 
